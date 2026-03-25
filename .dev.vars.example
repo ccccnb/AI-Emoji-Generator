@@ -1,0 +1,15 @@
+# 本地用 wrangler / opennextjs-cloudflare preview 时复制为 .dev.vars
+# https://developers.cloudflare.com/workers/testing/local-development/
+
+NEXTJS_ENV=development
+
+# 与 .env.local 中同名密钥一致（示例略，请从 .env.local.example 对照填写）
+# SILICONFLOW_API_KEY=
+# NEXT_PUBLIC_SUPABASE_URL=
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=
+# SUPABASE_SERVICE_ROLE_KEY=
+# ENFORCE_AUTH_FOR_GENERATE=
+# PAYPAL_ENV=
+# PAYPAL_CLIENT_ID=
+# PAYPAL_CLIENT_SECRET=
+# PAYPAL_WEBHOOK_ID=

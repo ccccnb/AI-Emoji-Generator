@@ -1,0 +1,121 @@
+AI Emoji Generator - MVP 产品文档
+
+一、产品概述
+产品名称：AI Emoji Generator（EmojiAI）
+版本：v0.2.0（MVP 调整版）
+定位：基于 AI 图像生成技术，让用户通过文字描述快速生成个性化 emoji 图片，并在浏览器内完成表情包预览与多规格导出。
+
+二、核心功能（MVP 范围）
+1. AI Emoji 生成
+- 用户输入文字描述，AI 自动生成 4 张候选图。
+- 支持 8 种风格：卡通、像素、3D、简约、水彩、动漫、贴纸、黏土。
+- 通过风格强化提示词（lead prompt）+ 负向提示词（negative prompt）提升风格区分度。
+
+2. 表情包制作
+- 用户可在生成图片上叠加顶部/底部文字。
+- 点击生成图可预览合成后的表情包效果。
+- 预览图在前端通过 Canvas 合成，不依赖服务端二次处理。
+
+3. 多规格导出（新增）
+- 下载前可选择导出规格：
+  - 原图 PNG（当前预览尺寸）
+  - 微信表情约 240 PNG
+  - Telegram 贴纸 512 WebP
+  - Discord 表情 128 PNG
+- 导出时执行正方形居中裁切（cover），并按目标格式输出。
+
+4. 多语言支持
+- 支持中文 / 英文切换。
+- 页面文案、风格名称、导出说明均支持双语。
+
+5. 免费次数限制
+- 每日免费生成次数：5 次（DAILY_LIMIT=5）。
+- 基于 localStorage（键名：emoji_gen_usage）按天重置。
+- 超出限额后禁用生成并提示次日再来。
+
+三、技术栈
+层级	技术
+前端框架	Next.js 14.2.28（App Router）
+UI 样式	Tailwind CSS v4
+语言	TypeScript
+AI 接口	硅基流动 SiliconFlow API
+图像模型	Kwai-Kolors/Kolors
+表情包合成与导出	浏览器 Canvas API（toDataURL / toBlob）
+部署环境	本地开发（localhost:3000）
+
+四、核心实现说明
+1. 后端生成接口（app/api/generate/route.ts）
+- 请求参数：prompt、style。
+- 调用 SiliconFlow `/v1/images/generations`。
+- 当前关键参数：
+  - model: Kwai-Kolors/Kolors
+  - image_size: 1024x1024
+  - batch_size: 4
+  - num_inference_steps: 22
+  - guidance_scale: 9.5
+  - negative_prompt: 按风格动态注入
+- 响应解析兼容 `images` 与 `data` 两种字段结构，统一返回 `{ images: string[] }`。
+
+2. 前端页面（app/page.tsx）
+- 生成流程：输入提示词 -> 请求 API -> 渲染 4 图网格 -> 点击单图生成表情包预览。
+- 通过 `useEffect` 在客户端初始化剩余次数，避免 SSR/CSR 水合不一致。
+- Tailwind v4 悬浮遮罩已使用 `bg-purple-500/0` 与 `group-hover:bg-purple-500/20` 语法。
+
+3. 导出流程（前端）
+- 预览图为 data URL。
+- 根据导出预设（尺寸、MIME、扩展名）进行：
+  - 加载图片
+  - Canvas 居中裁切缩放
+  - PNG 或 WebP 导出
+  - 触发下载
+
+五、项目结构
+ai-emoji-generator/
+├── app/
+│   ├── page.tsx               # 主页面（前端 UI + 交互 + 导出）
+│   ├── layout.tsx             # 页面布局
+│   ├── globals.css            # 全局样式
+│   └── api/
+│       └── generate/
+│           └── route.ts       # 后端 API（调用 SiliconFlow）
+├── public/                    # 静态资源
+├── .env.local                 # 环境变量（API Key）
+├── next.config.mjs            # Next.js 配置
+└── package.json               # 依赖管理
+
+六、用户使用流程
+1. 打开页面。
+2. 选择风格（8 选 1）。
+3. 输入 emoji 描述文字。
+4. （可选）输入顶部/底部文案。
+5. 点击「生成」。
+6. 查看 4 张候选图。
+7. 点击其中一张进入表情包预览。
+8. 选择导出规格并下载。
+
+七、环境配置
+必需环境变量（.env.local）：
+SILICONFLOW_API_KEY=sk-xxxxxxxxxxxxxxxx
+
+本地启动命令：
+npm install --legacy-peer-deps
+npm run dev
+
+访问：http://localhost:3000
+
+八、MVP 限制与已知问题
+问题	说明
+次数限制基于本地存储	用户清除浏览器数据即可绕过
+无用户账号系统	无登录、无历史记录、无跨设备同步
+图片无服务端存储	生成图 URL 时效性受上游接口限制，不做持久化
+无付费墙	超额后仅阻断生成，无购买升级闭环
+模型固定	当前仅使用 Kolors 模型，无模型切换
+平台规范差异	导出规格是“常用预设”，不保证所有平台审核一次通过
+
+九、后续迭代方向（Post-MVP）
+- 用户登录与云端次数管理（防刷 + 多端同步）
+- 生成历史、收藏、再次编辑
+- 模型可选与参数可调（如风格强度、采样步数）
+- 付费套餐与额度体系
+- 表情模板库与社区分享
+- 平台一键适配（微信/Telegram/Discord 预校验）
