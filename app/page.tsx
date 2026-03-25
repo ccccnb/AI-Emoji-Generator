@@ -247,6 +247,12 @@ const lastPreviewUrlRef = useRef<string | null>(null)
 const canvasRef = useRef<HTMLCanvasElement>(null)
 const t = i18n[lang]
 
+const freeAvailable = remaining != null && remaining > 0
+const cloudAvailable = cloudCredits != null && cloudCredits > 0
+// Rule: when free is used up (dailyRemaining <= 0), allow generation via cloud credits.
+const canGenerate =
+  freeAvailable || (cloudAvailable && (!freeAvailable || remaining == null))
+
 useEffect(() => {
   setRemaining(getRemainingToday())
   void refreshCloudQuota()
@@ -291,7 +297,10 @@ async function refreshCloudQuota() {
 // 生成图片
 async function handleGenerate() {
 if (!prompt.trim() || loading) return
-if (remaining == null || remaining <= 0) { setError(t.noFree); return }
+if (!canGenerate) {
+  setError(t.noFree)
+  return
+}
 setLoading(true)
 setError('')
 setImages([])
@@ -442,7 +451,7 @@ return (
       {/* 生成按钮 */}
       <button
         onClick={handleGenerate}
-        disabled={loading || !prompt.trim() || remaining == null || remaining <= 0}
+        disabled={loading || !prompt.trim() || !canGenerate}
         className="w-full py-3 rounded-2xl bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white font-bold text-lg transition"
       >
         {loading ? t.generating : t.generate}
@@ -450,10 +459,18 @@ return (
       {/* 剩余次数 */}
       <p
         className={`text-center text-sm ${
-          remaining === 0 ? 'text-red-400' : 'text-gray-400'
+          freeAvailable ? 'text-gray-400' : cloudAvailable ? 'text-purple-400' : 'text-red-400'
         }`}
       >
-        {remaining == null ? '…' : remaining === 0 ? t.noFree : t.freeLeft(remaining)}
+        {remaining == null
+          ? '…'
+          : freeAvailable
+            ? t.freeLeft(remaining)
+            : cloudAvailable
+              ? lang === 'zh'
+                ? '免费用完，使用云端点数'
+                : 'Free used up, using cloud credits'
+              : t.noFree}
       </p>
       {cloudCredits != null ? (
         <p className="text-center text-xs text-purple-400">
